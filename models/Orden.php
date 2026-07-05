@@ -10,7 +10,7 @@ class Orden {
 
     public function listar(): array {
         $sql = "SELECT id, fecha_procesamiento, eps, nombre_paciente,
-                       linea_servicio, municipio, departamento, es_orden_mei
+                       linea_servicio, municipio, departamento, es_orden_mei, gestionada
                 FROM ordenes_mei
                 ORDER BY fecha_procesamiento DESC";
         return $this->pdo->query($sql)->fetchAll();
@@ -26,6 +26,7 @@ class Orden {
 
     public function actualizar(int $id, array $datos): bool {
         $campos = [
+            'gestionada',
             'fecha_hora_correo', 'proveedor', 'eps', 'entidades', 'asignado_a',
             'nombre_paciente', 'primer_nombre', 'segundo_nombre', 'primer_apellido',
             'segundo_apellido', 'tipo_documento_paciente', 'documento_paciente',
@@ -44,9 +45,13 @@ class Orden {
         $sets = [];
         $params = [':id' => $id];
         foreach ($campos as $campo) {
-            if (isset($datos[$campo])) {
+            if (array_key_exists($campo, $datos)) {
                 $sets[] = "{$campo} = :{$campo}";
-                $params[":{$campo}"] = $datos[$campo];
+                if ($campo === 'gestionada') {
+                    $params[":{$campo}"] = ($datos[$campo] === 'true' || $datos[$campo] === true) ? 'true' : 'false';
+                } else {
+                    $params[":{$campo}"] = $datos[$campo];
+                }
             }
         }
 
