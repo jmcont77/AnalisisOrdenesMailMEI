@@ -1,18 +1,17 @@
 <?php
 class Database {
     private static $instance = null;
-    
-    private $host     = 'postgres-5lyq.railway.internal';
-    private $port     = '5432';
-    private $dbname   = 'railway';
-    private $user     = 'postgres';
-    private $password = 'lkSXQdgqDcIJKhdhwUBnvRlcZchjEtDk';
-    
     private $pdo;
     
     private function __construct() {
-        $dsn = "pgsql:host={$this->host};port={$this->port};dbname={$this->dbname}";
-        $this->pdo = new PDO($dsn, $this->user, $this->password, [
+        $host     = getenv('DB_HOST') ?: 'postgres-5lyq.railway.internal';
+        $port     = getenv('DB_PORT') ?: '5432';
+        $dbname   = getenv('DB_NAME') ?: 'railway';
+        $user     = getenv('DB_USER') ?: 'postgres';
+        $password = getenv('DB_PASS') ?: 'lkSXQdgqDcIJKhdhwUBnvRlcZchjEtDk';
+        
+        $dsn = "pgsql:host={$host};port={$port};dbname={$dbname}";
+        $this->pdo = new PDO($dsn, $user, $password, [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         ]);
