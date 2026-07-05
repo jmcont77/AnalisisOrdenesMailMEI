@@ -1,15 +1,25 @@
-FROM php:8.2-apache
+FROM ubuntu:22.04
 
-RUN apt-get update && apt-get install -y libpq-dev && \
-    docker-php-ext-install pdo pdo_pgsql && \
-    a2dismod mpm_event mpm_worker && \
-    a2enmod mpm_prefork rewrite
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    apache2 \
+    php8.1 \
+    php8.1-pgsql \
+    php8.1-pdo \
+    libapache2-mod-php8.1 \
+    && a2enmod rewrite \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY . /var/www/html/
+
+RUN chown -R www-data:www-data /var/www/html
 
 RUN echo '<Directory /var/www/html>\n\
     AllowOverride All\n\
     Require all granted\n\
-</Directory>' >> /etc/apache2/apache2.conf
+</Directory>' >> /etc/apache2/sites-available/000-default.conf
 
 EXPOSE 80
+
+CMD ["apache2ctl", "-D", "FOREGROUND"]
