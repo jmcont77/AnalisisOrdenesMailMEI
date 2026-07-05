@@ -196,9 +196,14 @@ html, body { height: 100%; font-family: 'Segoe UI', Arial, sans-serif; font-size
 .diff-panel { display: flex; flex-direction: column; overflow: hidden; border-right: 1px solid #e0e0e0; }
 .diff-panel:last-child { border-right: none; }
 .diff-title { padding: 6px 12px; background: #f8f9fa; font-size: 11px; font-weight: 700; color: #555; border-bottom: 1px solid #e0e0e0; flex-shrink: 0; }
-.diff-content { flex: 1; overflow-y: auto; padding: 10px 12px; font-family: 'Courier New', monospace; font-size: 11px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; color: #333; }
+.diff-content { flex: 1; overflow-y: auto; padding: 0; font-family: 'Courier New', monospace; font-size: 11px; line-height: 1.6; word-break: break-word; color: #333; }
 .diff-anterior { background: #fff8f8; }
 .diff-nuevo    { background: #f8fff8; }
+.diff-line { padding: 1px 12px; white-space: pre-wrap; min-height: 1.6em; }
+.diff-line-removed     { background: #ffcccc; color: #8b0000; }
+.diff-line-added       { background: #ccffcc; color: #006400; }
+.diff-line-equal       { color: #444; }
+.diff-line-placeholder { background: #f0f0f0; }
 
 /* Toast */
 #toast { position: fixed; bottom: 20px; right: 20px; background: #27ae60; color: #fff; padding: 10px 20px; border-radius: 6px; font-size: 13px; display: none; z-index: 200; box-shadow: 0 3px 10px rgba(0,0,0,.2); }
@@ -421,10 +426,78 @@ async function verDiff(id, el) {
   const res       = await fetch(`/api/config-auditoria-item/${id}`);
   auditoriaActual = await res.json();
 
-  document.getElementById('modal-titulo').textContent  = `Cambio del ${auditoriaActual.modificado_en}`;
-  document.getElementById('diff-anterior').textContent = auditoriaActual.valor_anterior || '(vacío)';
-  document.getElementById('diff-nuevo').textContent    = auditoriaActual.valor_nuevo    || '(vacío)';
+  document.getElementById('modal-titulo').textContent = `Cambio del ${auditoriaActual.modificado_en}`;
+
+  const anterior = auditoriaActual.valor_anterior || '';
+  const nuevo    = auditoriaActual.valor_nuevo    || '';
+  const { htmlAnterior, htmlNuevo } = calcularDiff(anterior, nuevo);
+
+  document.getElementById('diff-anterior').innerHTML = htmlAnterior;
+  document.getElementById('diff-nuevo').innerHTML    = htmlNuevo;
   document.getElementById('modal-overlay').classList.add('visible');
+
+  // Scroll sincronizado
+  const panelA = document.getElementById('diff-anterior');
+  const panelN = document.getElementById('diff-nuevo');
+  let sync = false;
+  panelA.onscroll = () => { if (!sync) { sync = true; panelN.scrollTop = panelA.scrollTop; sync = false; } };
+  panelN.onscroll = () => { if (!sync) { sync = true; panelA.scrollTop = panelN.scrollTop; sync = false; } };
+}
+
+function calcularDiff(textoA, textoN) {
+  const lineasA = textoA.split('\n');
+  const lineasN = textoN.split('\n');
+  const m = lineasA.length;
+  const n = lineasN.length;
+  const MAX = 800;
+  let htmlAnterior = '';
+  let htmlNuevo    = '';
+
+  if (m <= MAX && n <= MAX) {
+    // LCS
+    const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        dp[i][j] = lineasA[i-1] === lineasN[j-1]
+          ? dp[i-1][j-1] + 1
+          : Math.max(dp[i-1][j], dp[i][j-1]);
+      }
+    }
+    const ops = [];
+    let i = m, j = n;
+    while (i > 0 || j > 0) {
+      if (i > 0 && j > 0 && lineasA[i-1] === lineasN[j-1]) {
+        ops.unshift({ tipo: 'equal', a: lineasA[i-1], n: lineasN[j-1] }); i--; j--;
+      } else if (j > 0 && (i === 0 || dp[i][j-1] >= dp[i-1][j])) {
+        ops.unshift({ tipo: 'added', n: lineasN[j-1] }); j--;
+      } else {
+        ops.unshift({ tipo: 'removed', a: lineasA[i-1] }); i--;
+      }
+    }
+    for (const op of ops) {
+      if (op.tipo === 'equal') {
+        htmlAnterior += `<div class="diff-line diff-line-equal">${escHtml(op.a)}</div>`;
+        htmlNuevo    += `<div class="diff-line diff-line-equal">${escHtml(op.n)}</div>`;
+      } else if (op.tipo === 'removed') {
+        htmlAnterior += `<div class="diff-line diff-line-removed">− ${escHtml(op.a)}</div>`;
+        htmlNuevo    += `<div class="diff-line diff-line-placeholder">&nbsp;</div>`;
+      } else {
+        htmlAnterior += `<div class="diff-line diff-line-placeholder">&nbsp;</div>`;
+        htmlNuevo    += `<div class="diff-line diff-line-added">+ ${escHtml(op.n)}</div>`;
+      }
+    }
+  } else {
+    // Fallback para textos muy grandes
+    lineasA.forEach((l, idx) => {
+      const igual = lineasN[idx] === l;
+      htmlAnterior += `<div class="diff-line ${igual ? 'diff-line-equal' : 'diff-line-removed'}">${igual ? '' : '− '}${escHtml(l)}</div>`;
+    });
+    lineasN.forEach((l, idx) => {
+      const igual = lineasA[idx] === l;
+      htmlNuevo += `<div class="diff-line ${igual ? 'diff-line-equal' : 'diff-line-added'}">${igual ? '' : '+ '}${escHtml(l)}</div>`;
+    });
+  }
+  return { htmlAnterior, htmlNuevo };
 }
 
 // ── Restaurar ─────────────────────────────────────────────
