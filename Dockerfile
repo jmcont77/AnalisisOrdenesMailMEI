@@ -11,20 +11,17 @@ RUN apt-get update && apt-get install -y \
     && a2enmod rewrite \
     && rm -rf /var/lib/apt/lists/*
 
-# Limpiar directorio web completamente
 RUN rm -rf /var/www/html/*
 
-# Copiar archivos del proyecto
 COPY . /var/www/html/
-
-# Verificar que index.php existe
-RUN ls -la /var/www/html/
 
 RUN chown -R www-data:www-data /var/www/html && \
     chmod -R 755 /var/www/html
 
-# Configurar Apache para usar index.php
-RUN echo 'DirectoryIndex index.php index.html' > /etc/apache2/mods-enabled/dir.conf
+COPY apache-visor.conf /etc/apache2/sites-available/000-default.conf
 
-RUN echo '<Directory /var/www/html>\n\
-    Options Indexes
+RUN a2ensite 000-default
+
+EXPOSE 80
+
+CMD ["apache2ctl", "-D", "FOREGROUND"]
