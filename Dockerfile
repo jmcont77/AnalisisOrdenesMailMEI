@@ -11,18 +11,20 @@ RUN apt-get update && apt-get install -y \
     && a2enmod rewrite \
     && rm -rf /var/lib/apt/lists/*
 
-# Eliminar página por defecto de Ubuntu
-RUN rm -f /var/www/html/index.html
+# Limpiar directorio web completamente
+RUN rm -rf /var/www/html/*
 
+# Copiar archivos del proyecto
 COPY . /var/www/html/
 
-RUN chown -R www-data:www-data /var/www/html
+# Verificar que index.php existe
+RUN ls -la /var/www/html/
+
+RUN chown -R www-data:www-data /var/www/html && \
+    chmod -R 755 /var/www/html
+
+# Configurar Apache para usar index.php
+RUN echo 'DirectoryIndex index.php index.html' > /etc/apache2/mods-enabled/dir.conf
 
 RUN echo '<Directory /var/www/html>\n\
-    AllowOverride All\n\
-    Require all granted\n\
-</Directory>' >> /etc/apache2/apache2.conf
-
-EXPOSE 80
-
-CMD ["apache2ctl", "-D", "FOREGROUND"]
+    Options Indexes
