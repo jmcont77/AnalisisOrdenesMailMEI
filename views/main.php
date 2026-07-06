@@ -12,7 +12,7 @@ html, body { height: 100%; font-family: 'Segoe UI', Arial, sans-serif; font-size
 #app {
   display: grid;
   grid-template-columns: 300px 1fr;
-  grid-template-rows: 60% 40%;
+  grid-template-rows: 48% 52%;
   height: 100vh;
   gap: 6px;
   padding: 6px;
