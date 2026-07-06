@@ -364,6 +364,9 @@ const SECCIONES = [
 async function cargarOrdenes() {
   const res = await fetch('/api/ordenes');
   todosRegistros = await res.json();
+  // Ordenar por id descendente: refleja el orden de inserción en la BD,
+  // mostrando los registros más recientes primero.
+  todosRegistros.sort((a, b) => (b.id || 0) - (a.id || 0));
   aplicarFiltros(); // en vez de renderLista(todosRegistros) directo, para preservar filtros activos
 }
 
