@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Visor MEI — Oxipro</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; background: #f0f2f5; color: #222; overflow: hidden; }
@@ -173,6 +174,15 @@ html, body { height: 100%; font-family: 'Segoe UI', Arial, sans-serif; font-size
 #visor-contenido img { max-width: 100%; transition: transform .2s; transform-origin: center center; border-radius: 4px; }
 .visor-vacio { color: #555; font-size: 14px; text-align: center; }
 .visor-vacio .icon { font-size: 48px; margin-bottom: 10px; }
+#visor-txt {
+  width: 100%; height: 100%; margin: 0; padding: 16px; background: #fff; color: #222;
+  font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; white-space: pre-wrap;
+  word-break: break-word; overflow: auto; border-radius: 4px; text-align: left;
+}
+#visor-excel-wrap { width: 100%; height: 100%; overflow: auto; background: #fff; border-radius: 4px; padding: 10px; }
+#visor-excel-wrap table { border-collapse: collapse; font-size: 11px; }
+#visor-excel-wrap table td, #visor-excel-wrap table th { border: 1px solid #ddd; padding: 4px 8px; white-space: nowrap; }
+#visor-excel-wrap table tr:first-child td { background: #e8f0fa; font-weight: 600; }
 
 /* Toast */
 #toast { position: fixed; bottom: 20px; right: 20px; background: #27ae60; color: #fff; padding: 10px 20px; border-radius: 6px; font-size: 13px; display: none; z-index: 999; box-shadow: 0 3px 10px rgba(0,0,0,.2); }
@@ -542,7 +552,7 @@ function clasePorExt(ext) {
 }
 
 // ── Visualizador ──────────────────────────────────────────
-function verAdjunto(id, ext, mime, el) {
+async function verAdjunto(id, ext, mime, el) {
   document.querySelectorAll('.adjunto-item').forEach(e => e.classList.remove('activo'));
   el.classList.add('activo');
   zoomActual = 1.0;
@@ -552,11 +562,48 @@ function verAdjunto(id, ext, mime, el) {
   const contenido = document.getElementById('visor-contenido');
   const esImg     = ['jpg','jpeg','png','gif','webp'].includes(ext);
   const esPdf     = ext === 'pdf';
+  const esHtml    = ext === 'html' || ext === 'htm';
+  const esTxt     = ext === 'txt';
+  const esExcel   = ['xlsx','xls'].includes(ext);
 
-  if (esPdf) {
+  if (esPdf || esHtml) {
+    // El navegador renderiza PDF e HTML directo dentro del iframe
     contenido.innerHTML = `<iframe src="${url}"></iframe>`;
+
   } else if (esImg) {
     contenido.innerHTML = `<img src="${url}" id="visor-img" alt="Adjunto">`;
+
+  } else if (esTxt) {
+    contenido.innerHTML = `<div class="visor-vacio">Cargando texto...</div>`;
+    try {
+      const res  = await fetch(url);
+      const text = await res.text();
+      contenido.innerHTML = `<pre id="visor-txt">${escHtml(text)}</pre>`;
+    } catch(e) {
+      contenido.innerHTML = `<div class="visor-vacio">
+        <div class="icon">⚠️</div>
+        <div style="margin-bottom:10px">No se pudo cargar el archivo</div>
+        <a href="${url}" target="_blank" download style="color:#7ab8ff;text-decoration:underline;">⬇️ Descargar</a>
+      </div>`;
+    }
+
+  } else if (esExcel) {
+    contenido.innerHTML = `<div class="visor-vacio">Cargando hoja de cálculo...</div>`;
+    try {
+      const res    = await fetch(url);
+      const buffer = await res.arrayBuffer();
+      const wb     = XLSX.read(buffer, { type: 'array' });
+      const hoja   = wb.Sheets[wb.SheetNames[0]];
+      const tabla  = XLSX.utils.sheet_to_html(hoja, { editable: false });
+      contenido.innerHTML = `<div id="visor-excel-wrap">${tabla}</div>`;
+    } catch(e) {
+      contenido.innerHTML = `<div class="visor-vacio">
+        <div class="icon">⚠️</div>
+        <div style="margin-bottom:10px">No se pudo previsualizar el Excel</div>
+        <a href="${url}" target="_blank" download style="color:#7ab8ff;text-decoration:underline;">⬇️ Descargar</a>
+      </div>`;
+    }
+
   } else {
     contenido.innerHTML = `<div class="visor-vacio">
       <div class="icon">📎</div>
