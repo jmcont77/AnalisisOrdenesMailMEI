@@ -189,7 +189,7 @@ html, body { height: 100%; font-family: 'Segoe UI', Arial, sans-serif; font-size
 
   <!-- ZONA 1 -->
   <div id="z1">
-    <div class="zona-header">📋 Órdenes MEI</div>
+    <div class="zona-header">📋 Órdenes MEI <span id="refresh-countdown" style="font-size:10px; font-weight:400; opacity:.7;">⟳ 60s</span></div>
 
     <!-- Filtros -->
     <div class="filter-bar">
@@ -354,7 +354,7 @@ const SECCIONES = [
 async function cargarOrdenes() {
   const res = await fetch('/api/ordenes');
   todosRegistros = await res.json();
-  renderLista(todosRegistros);
+  aplicarFiltros(); // en vez de renderLista(todosRegistros) directo, para preservar filtros activos
 }
 
 function renderLista(lista) {
@@ -662,7 +662,33 @@ function mostrarToast(msg, error=false) {
   setTimeout(() => t.style.display = 'none', 3000);
 }
 
+// ── Auto-refresh con contador ────────────────────────────
+const REFRESH_INTERVAL_SEG = 60;
+let segundosParaRefresh    = REFRESH_INTERVAL_SEG;
+let refreshTimerId         = null;
+
+function iniciarAutoRefresh() {
+  if (refreshTimerId) clearInterval(refreshTimerId);
+  segundosParaRefresh = REFRESH_INTERVAL_SEG;
+  actualizarContadorRefresh();
+
+  refreshTimerId = setInterval(async () => {
+    segundosParaRefresh--;
+    if (segundosParaRefresh <= 0) {
+      await cargarOrdenes();
+      segundosParaRefresh = REFRESH_INTERVAL_SEG;
+    }
+    actualizarContadorRefresh();
+  }, 1000);
+}
+
+function actualizarContadorRefresh() {
+  const el = document.getElementById('refresh-countdown');
+  if (el) el.textContent = `⟳ ${segundosParaRefresh}s`;
+}
+
 cargarOrdenes();
+iniciarAutoRefresh();
 </script>
 </body>
 </html>
