@@ -41,6 +41,14 @@ html, body { height: 100%; font-family: 'Segoe UI', Arial, sans-serif; font-size
 }
 .search-bar { padding: 8px 10px; border-bottom: 1px solid #e8e8e8; flex-shrink: 0; }
 .search-bar input { width: 100%; padding: 5px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; }
+.filter-bar { padding: 8px 10px; border-bottom: 1px solid #e8e8e8; flex-shrink: 0; background: #f8f9fa; display: flex; flex-direction: column; gap: 6px; }
+.filter-row { display: flex; align-items: center; gap: 6px; }
+.filter-row label { font-size: 10px; font-weight: 600; color: #666; white-space: nowrap; min-width: 36px; }
+.filter-row select { flex: 1; padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; font-family: inherit; background: #fff; }
+.filter-row input[type="date"] { flex: 1; padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; font-family: inherit; background: #fff; }
+.filter-count { font-size: 10px; color: #888; text-align: right; padding: 0 2px; }
+.btn-limpiar { padding: 3px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 10px; background: #fff; cursor: pointer; color: #666; white-space: nowrap; }
+.btn-limpiar:hover { background: #f0f0f0; }
 #lista-ordenes { flex: 1; overflow-y: auto; }
 .orden-item { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: background .15s; }
 .orden-item:hover { background: #f0f6ff; }
@@ -182,8 +190,33 @@ html, body { height: 100%; font-family: 'Segoe UI', Arial, sans-serif; font-size
   <!-- ZONA 1 -->
   <div id="z1">
     <div class="zona-header">📋 Órdenes MEI</div>
+
+    <!-- Filtros -->
+    <div class="filter-bar">
+      <div class="filter-row">
+        <label>Estado</label>
+        <select id="filtro-estado" onchange="aplicarFiltros()">
+          <option value="">Todos</option>
+          <option value="gestionada">✅ Gestionadas</option>
+          <option value="pendiente">⏳ Pendientes</option>
+          <option value="mei">📋 Es MEI</option>
+          <option value="no-mei">❌ No MEI</option>
+        </select>
+        <button class="btn-limpiar" onclick="limpiarFiltros()">✕ Limpiar</button>
+      </div>
+      <div class="filter-row">
+        <label>Desde</label>
+        <input type="date" id="filtro-desde" onchange="aplicarFiltros()">
+      </div>
+      <div class="filter-row">
+        <label>Hasta</label>
+        <input type="date" id="filtro-hasta" onchange="aplicarFiltros()">
+      </div>
+      <div class="filter-count" id="filtro-count"></div>
+    </div>
+
     <div class="search-bar">
-      <input type="text" id="buscador" placeholder="Buscar paciente, EPS, municipio...">
+      <input type="text" id="buscador" placeholder="Buscar paciente, EPS, municipio..." oninput="aplicarFiltros()">
     </div>
     <div id="lista-ordenes">
       <div class="empty-msg">Cargando registros...</div>
@@ -552,17 +585,63 @@ function actualizarZoomLabel() {
   document.getElementById('zoom-nivel').textContent = Math.round(zoomActual * 100) + '%';
 }
 
-// ── Buscador ──────────────────────────────────────────────
-document.getElementById('buscador').addEventListener('input', function() {
-  const q = this.value.toLowerCase();
-  if (!q) { renderLista(todosRegistros); return; }
-  renderLista(todosRegistros.filter(o =>
-    (o.nombre_paciente    || '').toLowerCase().includes(q) ||
-    (o.eps                || '').toLowerCase().includes(q) ||
-    (o.municipio          || '').toLowerCase().includes(q) ||
-    (o.documento_paciente || '').toLowerCase().includes(q)
-  ));
-});
+// ── Filtros ───────────────────────────────────────────────
+function aplicarFiltros() {
+  const q      = (document.getElementById('buscador').value || '').toLowerCase();
+  const estado = document.getElementById('filtro-estado').value;
+  const desde  = document.getElementById('filtro-desde').value;
+  const hasta  = document.getElementById('filtro-hasta').value;
+
+  const resultado = todosRegistros.filter(o => {
+    // Filtro texto
+    if (q) {
+      const match =
+        (o.nombre_paciente    || '').toLowerCase().includes(q) ||
+        (o.eps                || '').toLowerCase().includes(q) ||
+        (o.municipio          || '').toLowerCase().includes(q) ||
+        (o.documento_paciente || '').toLowerCase().includes(q);
+      if (!match) return false;
+    }
+
+    // Filtro estado
+    if (estado === 'gestionada') {
+      if (o.gestionada !== true && o.gestionada !== 't') return false;
+    } else if (estado === 'pendiente') {
+      if (o.gestionada === true || o.gestionada === 't') return false;
+    } else if (estado === 'mei') {
+      if (!o.es_orden_mei) return false;
+    } else if (estado === 'no-mei') {
+      if (o.es_orden_mei) return false;
+    }
+
+    // Filtro fecha
+    if (desde || hasta) {
+      const fechaStr = (o.fecha_procesamiento || '').substring(0, 10);
+      if (!fechaStr) return false;
+      if (desde && fechaStr < desde) return false;
+      if (hasta && fechaStr > hasta) return false;
+    }
+
+    return true;
+  });
+
+  // Mostrar conteo
+  const total = todosRegistros.length;
+  const shown = resultado.length;
+  document.getElementById('filtro-count').textContent =
+    shown === total ? `${total} registros` : `${shown} de ${total} registros`;
+
+  renderLista(resultado);
+}
+
+function limpiarFiltros() {
+  document.getElementById('filtro-estado').value = '';
+  document.getElementById('filtro-desde').value  = '';
+  document.getElementById('filtro-hasta').value  = '';
+  document.getElementById('buscador').value       = '';
+  document.getElementById('filtro-count').textContent = '';
+  renderLista(todosRegistros);
+}
 
 // ── Helpers ───────────────────────────────────────────────
 function escHtml(str) {
