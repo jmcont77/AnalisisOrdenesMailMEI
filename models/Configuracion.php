@@ -10,7 +10,7 @@ class Configuracion {
 
     public function obtener(string $clave): ?array {
         $sql  = "SELECT clave, valor, descripcion,
-                        to_char(actualizado_en, 'DD/MM/YYYY HH24:MI:SS') AS actualizado_en
+                        to_char(actualizado_en AT TIME ZONE 'America/Bogota', 'DD/MM/YYYY HH24:MI:SS') AS actualizado_en
                  FROM configuracion WHERE clave = :clave";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([':clave' => $clave]);
@@ -43,7 +43,7 @@ class Configuracion {
 
     public function auditoria(string $clave): array {
         $sql  = "SELECT id, clave, descripcion,
-                        to_char(modificado_en, 'DD/MM/YYYY HH24:MI:SS') AS modificado_en
+                        to_char(modificado_en AT TIME ZONE 'America/Bogota', 'DD/MM/YYYY HH24:MI:SS') AS modificado_en
                  FROM configuracion_auditoria
                  WHERE clave = :clave
                  ORDER BY modificado_en DESC
@@ -55,7 +55,7 @@ class Configuracion {
 
     public function auditoriaItem(int $id): ?array {
         $sql  = "SELECT id, clave, valor_anterior, valor_nuevo, descripcion,
-                        to_char(modificado_en, 'DD/MM/YYYY HH24:MI:SS') AS modificado_en
+                        to_char(modificado_en AT TIME ZONE 'America/Bogota', 'DD/MM/YYYY HH24:MI:SS') AS modificado_en
                  FROM configuracion_auditoria
                  WHERE id = :id";
         $stmt = $this->pdo->prepare($sql);
