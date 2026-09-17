@@ -2,16 +2,19 @@
 require_once __DIR__ . '/../models/Orden.php';
 require_once __DIR__ . '/../models/Adjunto.php';
 require_once __DIR__ . '/../models/Configuracion.php';
+require_once __DIR__ . '/../models/LogCorreo.php';
 
 class ApiController {
     private Orden $ordenModel;
     private Adjunto $adjuntoModel;
     private Configuracion $configModel;
+    private LogCorreo $logCorreoModel;
 
     public function __construct() {
-        $this->ordenModel   = new Orden();
-        $this->adjuntoModel = new Adjunto();
-        $this->configModel  = new Configuracion();
+        $this->ordenModel     = new Orden();
+        $this->adjuntoModel   = new Adjunto();
+        $this->configModel    = new Configuracion();
+        $this->logCorreoModel = new LogCorreo();
     }
 
     public function json(mixed $data, int $code = 200): void {
@@ -79,6 +82,14 @@ class ApiController {
 
     public function auditoriaConfig(string $clave): void {
         $this->json($this->configModel->auditoria($clave));
+    }
+
+    // ── Log de correos ─────────────────────────────────
+    public function logCorreos(): void {
+        $desde  = $_GET['desde']  ?? '';
+        $hasta  = $_GET['hasta']  ?? '';
+        $estado = $_GET['estado'] ?? '';
+        $this->json($this->logCorreoModel->listar($desde, $hasta, $estado));
     }
 
     public function auditoriaConfigItem(int $id): void {
