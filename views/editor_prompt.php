@@ -240,7 +240,8 @@ html, body { height: 100%; font-family: 'Segoe UI', Arial, sans-serif; font-size
     <div class="toolbar">
       <label>Clave:</label>
       <select id="clave-selector" onchange="cargarPrompt()">
-        <option value="prompt_mei">prompt_mei</option>
+        <option value="prompt_mei">prompt_mei — Extractor MEI</option>
+        <option value="prompt_clasificador">prompt_clasificador — Clasificador</option>
       </select>
       <button class="btn btn-primary btn-sm" onclick="cargarPrompt()">🔄 Recargar</button>
     </div>
