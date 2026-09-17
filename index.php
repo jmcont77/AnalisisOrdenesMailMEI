@@ -40,6 +40,18 @@ if (preg_match('#^/api/config-auditoria-item/(\d+)/?$#', $uri, $m)) {
     exit;
 }
 
+// Ruta API — Log de correos
+if (preg_match('#^/api/log-correos/?$#', $uri)) {
+    (new ApiController())->logCorreos();
+    exit;
+}
+
+// Vista log de correos
+if (preg_match('#^/log-correos/?$#', $uri)) {
+    require_once __DIR__ . '/views/log_correos.php';
+    exit;
+}
+
 // Vista editor de prompt
 if (preg_match('#^/prompt/?$#', $uri)) {
     require_once __DIR__ . '/views/editor_prompt.php';
